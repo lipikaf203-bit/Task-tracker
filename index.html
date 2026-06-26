@@ -515,8 +515,8 @@ async function addTask() {
   errEl.classList.add('hidden');
 
   const { data: task, error } = await sb.from('tasks').insert([{ title, assignee, category, priority, due, status:'Pending', created: todayStr(), comments:[] }]).select().single();
-  if (error) { alert('Error saving task.'); return; }
-
+  
+if (error) { alert('Error saving member: ' + error.message + ' | Code: ' + error.code); return; }
   await sb.from('notifications').insert([{ to_member: assignee, type:'task_assigned', task_title: title, task_id: task.id, date: todayStr(), read: false }]);
 
   allTasks.push(task);
