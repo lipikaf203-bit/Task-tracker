@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TeamTrack</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; }
+    input, select, textarea { font-family: inherit; }
+    button { font-family: inherit; cursor: pointer; }
+    .hidden { display: none !important; }
+
+    /* LOGIN */
+    #login-screen { min-height: 100vh; background: linear-gradient(135deg,#6366f1,#8b5cf6); display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .login-card { background: #fff; border-radius: 20px; padding: 36px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .login-logo { text-align: center; margin-bottom: 28px; }
+    .login-logo .icon { font-size: 40px; }
+    .login-logo h1 { font-size: 22px; font-weight: 800; margin-top: 8px; }
+    .login-logo p { color: #94a3b8; font-size: 13px; margin-top: 4px; }
+    .login-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
+    .btn-primary { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; }
+    .btn-secondary { background: #f8fafc; color: #1e293b; border: 2px solid #e2e8f0 !important; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; color: #64748b; margin-bottom: 5px; }
+    .form-group input, .form-group select { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; outline: none; }
+    .error-msg { color: #ef4444; font-size: 12px; margin-bottom: 10px; }
+    .hint { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+    .back-btn { background: none; border: none; color: #6366f1; font-size: 13px; margin-bottom: 16px; padding: 0; }
+
+    /* HEADER */
+    #header { background: linear-gradient(135deg,#6366f1,#8b5cf6); padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+    #header .app-title { color: #fff; font-weight: 700; font-size: 17px; }
+    #header .app-sub { color: #c4b5fd; font-size: 11px; }
+    #header .spacer { flex: 1; }
+    .notif-btn { position: relative; background: rgba(255,255,255,0.2); border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 16px; color: #fff; display: flex; align-items: center; justify-content: center; }
+    .notif-badge { position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; background: #ef4444; border-radius: 50%; font-size: 10px; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+    .logout-btn { padding: 6px 14px; background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; font-size: 12px; }
+
+    /* NAV */
+    #nav { display: flex; background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 12px; overflow-x: auto; }
+    .nav-btn { padding: 13px 14px; border: none; background: none; font-size: 13px; color: #64748b; border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 400; }
+    .nav-btn.active { color: #6366f1; border-bottom-color: #6366f1; font-weight: 700; }
+
+    /* MAIN */
+    #main { padding: 20px; max-width: 900px; margin: 0 auto; }
+
+    /* CARDS */
+    .card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .section-title { font-weight: 700; font-size: 18px; margin-bottom: 4px; }
+    .section-sub { color: #64748b; font-size: 13px; margin-bottom: 20px; }
+    .empty-state { text-align: center; color: #94a3b8; padding: 48px; background: #fff; border-radius: 12px; border: 1px dashed #e2e8f0; }
+    .empty-state .empty-icon { font-size: 36px; margin-bottom: 8px; }
+    .empty-state .empty-title { font-weight: 600; }
+
+    /* FILTERS */
+    .filter-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .pill { padding: 5px 12px; border-radius: 20px; border: none; background: #f1f5f9; color: #64748b; font-size: 12px; font-weight: 400; }
+    .pill.active { background: #6366f1; color: #fff; font-weight: 600; }
+    .action-btn { padding: 8px 16px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; }
+
+    /* TASK CARD */
+    .task-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 14px 18px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .task-info { flex: 1; min-width: 0; }
+    .task-title { font-weight: 600; font-size: 14px; }
+    .task-meta { font-size: 12px; color: #64748b; margin-top: 5px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .task-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+    .task-badges { display: flex; gap: 6px; }
+    .badge { padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .stage-bar { display: flex; align-items: center; gap: 4px; margin-top: 10px; flex-wrap: wrap; }
+    .stage-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .stage-line { width: 18px; height: 2px; }
+    .stage-label { font-size: 10px; }
+    .btn-sm { padding: 5px 10px; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; }
+    .btn-advance { background: #6366f1; color: #fff; }
+    .btn-comment { background: #f1f5f9; color: #475569; }
+    .btn-email { background: #f1f5f9; color: #6366f1; }
+    .btn-delete { background: none; border: none; color: #cbd5e1; font-size: 15px; }
+    .task-btn-row { display: flex; gap: 6px; }
+
+    /* MEMBER GRID */
+    .member-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 12px; }
+    .member-card { background: #fff; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0; }
+    .member-avatar { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg,#6366f1,#8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 15px; }
+    .member-header { display: flex; justify-content: space-between; }
+    .member-name { font-weight: 700; margin-top: 10px; }
+    .member-role { color: #6366f1; font-size: 12px; }
+    .member-dept { color: #64748b; font-size: 12px; }
+    .member-email { color: #94a3b8; font-size: 11px; margin-top: 2px; }
+    .member-stats { font-size: 12px; color: #64748b; margin-top: 8px; }
+    .remove-btn { background: none; border: none; color: #cbd5e1; font-size: 16px; }
+
+    /* LEADERBOARD */
+    .lb-row { border-radius: 12px; padding: 14px 20px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+    .lb-rank { font-size: 26px; min-width: 36px; text-align: center; }
+    .lb-name { font-weight: 700; }
+    .lb-meta { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .lb-score { text-align: right; font-weight: 700; font-size: 20px; color: #6366f1; }
+    .lb-rate { text-align: right; font-weight: 700; font-size: 15px; color: #10b981; }
+    .lb-label { font-size: 10px; color: #94a3b8; }
+
+    /* APPRECIATION */
+    .app-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+    .app-emoji { font-size: 30px; flex-shrink: 0; }
+    .app-info { flex: 1; }
+    .app-from { font-weight: 700; font-size: 14px; }
+    .app-badge-pill { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 3px; }
+    .app-msg { color: #475569; font-size: 13px; margin-top: 5px; }
+    .app-date { color: #94a3b8; font-size: 11px; margin-top: 3px; }
+    .share-btn { padding: 6px 12px; background: #f1f5f9; border: none; border-radius: 8px; font-size: 12px; color: #6366f1; font-weight: 600; }
+
+    /* FORM */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-grid .full { grid-column: 1 / -1; }
+    .form-input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; outline: none; }
+    .form-textarea { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; resize: none; outline: none; }
+    .form-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .btn-save { padding: 8px 18px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; }
+    .btn-cancel { padding: 8px 18px; background: #f1f5f9; color: #475569; border: none; border-radius: 8px; font-size: 13px; }
+    .badge-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .badge-select-btn { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+    /* MODAL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+    .modal-box { background: #fff; border-radius: 16px; padding: 28px; max-width: 480px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .modal-title { font-weight: 700; font-size: 16px; margin-bottom: 16px; }
+    .email-preview { background: #f8fafc; border-radius: 10px; padding: 16px; font-size: 13px; color: #374151; line-height: 1.7; border: 1px solid #e2e8f0; white-space: pre-wrap; max-height: 260px; overflow-y: auto; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .btn-copy { flex: 1; padding: 9px; background: #f1f5f9; color: #475569; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; }
+    .btn-copy.copied { background: #10b981; color: #fff; }
+    .btn-mail { flex: 1; padding: 9px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; text-decoration: none; text-align: center; }
+    .btn-close { padding: 9px 14px; background: #f1f5f9; color: #475569; border: none; border-radius: 8px; font-size: 13px; }
+
+    /* COMMENT PANEL */
+    .comment-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 200; padding: 16px; }
+    .comment-panel { background: #fff; border-radius: 16px; padding: 24px; max-width: 480px; width: 100%; max-height: 70vh; display: flex; flex-direction: column; box-shadow: 0 -4px 32px rgba(0,0,0,0.1); }
+    .comment-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+    .comment-bubble { border-radius: 10px; padding: 10px 14px; max-width: 85%; }
+    .comment-bubble.mine { background: #ede9fe; align-self: flex-end; }
+    .comment-bubble.theirs { background: #f8fafc; align-self: flex-start; }
+    .comment-author { font-size: 11px; color: #6366f1; font-weight: 600; margin-bottom: 3px; }
+    .comment-text { font-size: 13px; }
+    .comment-input-row { display: flex; gap: 8px; }
+
+    /* SHARE CARD */
+    .share-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+    .share-card { border-radius: 20px; padding: 36px; max-width: 340px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .share-emoji { font-size: 52px; }
+    .share-name { font-weight: 800; font-size: 22px; margin-top: 10px; }
+    .share-badge-label { font-weight: 600; margin-top: 4px; }
+    .share-msg { color: #475569; margin-top: 14px; font-size: 14px; font-style: italic; line-height: 1.6; }
+    .share-from { color: #94a3b8; font-size: 12px; margin-top: 10px; }
+
+    /* NOTIF PANEL */
+    .notif-panel { position: absolute; top: 56px; right: 16px; background: #fff; border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); width: 320px; max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; z-index: 150; }
+    .notif-header { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+    .notif-item { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+    .notif-item.unread { background: #f5f3ff; }
+    .notif-date { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+    .mark-read-btn { background: none; border: none; color: #6366f1; font-size: 12px; cursor: pointer; }
+
+    .warning-bar { background: #fef3c7; border: 1px solid #fde68a; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #92400e; }
+    .loading { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon">🎯</div>
+      <h1>TeamTrack</h1>
+      <p>Task Management & Recognition</p>
+    </div>
+    <div id="login-role-select">
+      <p style="color:#64748b;font-size:13px;text-align:center;margin-bottom:14px;">Login as</p>
+      <button class="login-btn btn-primary" onclick="showLoginForm('manager')">👩‍💼 Manager / Admin</button>
+      <button class="login-btn btn-secondary" onclick="showLoginForm('member')">👤 Team Member</button>
+    </div>
+    <div id="login-form" class="hidden">
+      <button class="back-btn" onclick="showRoleSelect()">← Back</button>
+      <h3 id="login-form-title" style="font-size:16px;font-weight:700;margin-bottom:16px;"></h3>
+      <div id="member-select-group" class="form-group hidden">
+        <label>Your Name</label>
+        <select id="member-select" class="form-input">
+          <option value="">-- Select your name --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>PIN</label>
+        <input type="password" id="pin-input" class="form-input" placeholder="Enter PIN" maxlength="6" onkeydown="if(event.key==='Enter') doLogin()" style="letter-spacing:4px"/>
+        <div class="hint" id="pin-hint"></div>
+      </div>
+      <div class="error-msg hidden" id="login-error"></div>
+      <button class="login-btn btn-primary" onclick="doLogin()">Login →</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <div style="position:relative;">
+    <div id="header">
+      <span style="font-size:22px;">🎯</span>
+      <div>
+        <div class="app-title">TeamTrack</div>
+        <div class="app-sub" id="header-sub"></div>
+      </div>
+      <div class="spacer"></div>
+      <button class="notif-btn" onclick="toggleNotif()">🔔<span class="notif-badge hidden" id="notif-badge">0</span></button>
+      <button class="logout-btn" onclick="doLogout()" style="margin-left:8px;">Logout</button>
+    </div>
+    <div id="notif-panel" class="notif-panel hidden"></div>
+  </div>
+
+  <div id="nav"></div>
+  <div id="main"></div>
+</div>
+
+<!-- MODALS -->
+<div id="email-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-title">📧 Email Draft — Task Assignment</div>
+    <div class="email-preview" id="email-preview-text"></div>
+    <div class="modal-actions">
+      <button class="btn-copy" id="copy-btn" onclick="copyEmail()">📋 Copy</button>
+      <a class="btn-mail" id="mailto-link" href="#">✉️ Open in Mail</a>
+      <button class="btn-close" onclick="closeModal('email-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="comment-modal" class="comment-overlay hidden">
+  <div class="comment-panel">
+    <div style="font-weight:700;font-size:15px;margin-bottom:4px;" id="comment-task-title"></div>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:14px;" id="comment-task-assignee"></div>
+    <div class="comment-list" id="comment-list"></div>
+    <div class="comment-input-row">
+      <input class="form-input" id="comment-input" placeholder="Add a comment..." style="flex:1;" onkeydown="if(event.key==='Enter') submitComment()"/>
+      <button class="btn-save" onclick="submitComment()">Send</button>
+    </div>
+  </div>
+</div>
+
+<div id="share-modal" class="share-overlay hidden" onclick="closeModal('share-modal')">
+  <div class="share-card" id="share-card-inner" onclick="event.stopPropagation()">
+    <div class="share-emoji" id="share-emoji"></div>
+    <div class="share-name" id="share-name"></div>
+    <div class="share-badge-label" id="share-badge-label"></div>
+    <div class="share-msg" id="share-msg"></div>
+    <div class="share-from" id="share-from"></div>
+    <button class="btn-save" style="margin-top:20px;" onclick="closeModal('share-modal')">Close</button>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://rttoxwxtvmfvcbkclxal.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0dG94d3h0dm1mdmNia2NseGFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjQzMjUsImV4cCI6MjA5ODAwMDMyNX0.81vT7IQrI687lA0CFb7wbpftbCfqQ7z946O6zKkvFSc';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const MANAGER_PIN = '1234';
+const MEMBER_PIN = '0000';
+const BADGES = [
+  { id:'speed', label:'Speed Star', emoji:'⚡', color:'#f59e0b' },
+  { id:'team', label:'Team Player', emoji:'🤝', color:'#3b82f6' },
+  { id:'gogetter', label:'Go-Getter', emoji:'🚀', color:'#8b5cf6' },
+  { id:'reliable', label:'Reliable Rock', emoji:'🏔️', color:'#10b981' },
+  { id:'creative', label:'Creative Mind', emoji:'💡', color:'#f43f5e' },
+];
+const CATEGORIES = ['HR / People','Project / Delivery','Cross-functional'];
+const PRIORITIES = ['Low','Medium','High'];
+const STAGES = ['Pending','In Progress','Done'];
+const prioColor = { Low:'#10b981', Medium:'#f59e0b', High:'#ef4444' };
+const stageColors = {
+  'Pending':     { bg:'#f3f4f6', color:'#374151' },
+  'In Progress': { bg:'#dbeafe', color:'#1e40af' },
+  'Done':        { bg:'#d1fae5', color:'#065f46' },
+  'Overdue':     { bg:'#fee2e2', color:'#991b1b' },
+};
+
+let currentUser = null;
+let currentTab = 'tasks';
+let allMembers = [], allTasks = [], allAppreciations = [], allNotifications = [];
+let activeFilter = 'All';
+let currentCommentTaskId = null;
+let currentEmailDraft = null;
+let notifOpen = false;
+let selectedBadge = 'speed';
+let selectedAppBadge = 'speed';
+
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function getDisplayStatus(t) {
+  if (t.status === 'Done') return 'Done';
+  if (new Date(t.due) < new Date()) return 'Overdue';
+  return t.status;
+}
+function getTAT(t) {
+  const s = new Date(t.created), e = t.completed_on ? new Date(t.completed_on) : new Date();
+  return Math.ceil((e - s) / 86400000);
+}
+function getBadge(id) { return BADGES.find(b => b.id === id) || BADGES[0]; }
+function rankEmoji(i) { return i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`; }
+
+// ── LOGIN ──
+function showLoginForm(role) {
+  document.getElementById('login-role-select').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
+  document.getElementById('login-form-title').textContent = role === 'manager' ? '👩‍💼 Manager Login' : '👤 Member Login';
+  document.getElementById('pin-hint').textContent = role === 'manager' ? 'Manager PIN: 1234' : 'Member PIN: 0000';
+  const mg = document.getElementById('member-select-group');
+  if (role === 'member') {
+    mg.classList.remove('hidden');
+    const sel = document.getElementById('member-select');
+    sel.innerHTML = '<option value="">-- Select your name --</option>';
+    allMembers.forEach(m => { const o = document.createElement('option'); o.value = m.name; o.textContent = m.name + (m.role ? ` (${m.role})` : ''); sel.appendChild(o); });
+  } else { mg.classList.add('hidden'); }
+  document.getElementById('pin-input').value = '';
+  document.getElementById('login-error').classList.add('hidden');
+  document.getElementById('login-form').dataset.role = role;
+}
+
+function showRoleSelect() {
+  document.getElementById('login-role-select').classList.remove('hidden');
+  document.getElementById('login-form').classList.add('hidden');
+}
+
+function showError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg; el.classList.remove('hidden');
+}
+
+function doLogin() {
+  const role = document.getElementById('login-form').dataset.role;
+  const pin = document.getElementById('pin-input').value;
+  if (role === 'manager') {
+    if (pin !== MANAGER_PIN) { showError('Incorrect PIN.'); return; }
+    currentUser = { role:'manager', name:'Manager' };
+  } else {
+    const name = document.getElementById('member-select').value;
+    if (!name) { showError('Please select your name.'); return; }
+    if (pin !== MEMBER_PIN) { showError('Incorrect PIN.'); return; }
+    currentUser = { role:'member', name };
+  }
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('header-sub').textContent = currentUser.role === 'manager' ? '👩‍💼 Manager View' : `👤 ${currentUser.name}`;
+  renderNav();
+  loadAndRender();
+}
+
+function doLogout() {
+  currentUser = null; currentTab = 'tasks'; activeFilter = 'All';
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  showRoleSelect();
+}
+
+// ── NAV ──
+function renderNav() {
+  const tabs = currentUser.role === 'manager'
+    ? [['tasks','📋 Tasks'],['team','👥 Team'],['leaderboard','🏆 Leaderboard'],['appreciation','🌟 Appreciation']]
+    : [['tasks','📋 My Tasks'],['leaderboard','🏆 Leaderboard'],['appreciation','🌟 Appreciation']];
+  document.getElementById('nav').innerHTML = tabs.map(([k,l]) =>
+    `<button class="nav-btn ${currentTab===k?'active':''}" onclick="switchTab('${k}')">${l}</button>`
+  ).join('');
+}
+
+function switchTab(tab) { currentTab = tab; activeFilter = 'All'; renderNav(); renderMain(); }
+
+// ── LOAD DATA ──
+async function loadAndRender() {
+  document.getElementById('main').innerHTML = '<div class="loading">Loading...</div>';
+  const [{ data: members }, { data: tasks }, { data: apps }, { data: notifs }] = await Promise.all([
+    sb.from('members').select('*').order('created_at'),
+    sb.from('tasks').select('*').order('created_at'),
+    sb.from('appreciations').select('*').order('created_at', { ascending: false }),
+    sb.from('notifications').select('*').order('created_at', { ascending: false }),
+  ]);
+  allMembers = members || [];
+  allTasks = tasks || [];
+  allAppreciations = apps || [];
+  allNotifications = notifs || [];
+  updateNotifBadge();
+  renderMain();
+}
+
+function updateNotifBadge() {
+  const unread = allNotifications.filter(n => n.to_member === currentUser.name && !n.read);
+  const badge = document.getElementById('notif-badge');
+  if (unread.length > 0) { badge.textContent = unread.length; badge.classList.remove('hidden'); }
+  else { badge.classList.add('hidden'); }
+}
+
+// ── RENDER MAIN ──
+function renderMain() {
+  const el = document.getElementById('main');
+  if (currentTab === 'tasks') el.innerHTML = renderTasks();
+  else if (currentTab === 'team') el.innerHTML = renderTeam();
+  else if (currentTab === 'leaderboard') el.innerHTML = renderLeaderboard();
+  else if (currentTab === 'appreciation') el.innerHTML = renderAppreciation();
+}
+
+// ── TASKS ──
+function renderTasks() {
+  const isManager = currentUser.role === 'manager';
+  const myTasks = isManager ? allTasks : allTasks.filter(t => t.assignee === currentUser.name);
+  const filters = ['All','Pending','In Progress','Done','Overdue'];
+  const filtered = activeFilter === 'All' ? myTasks : myTasks.filter(t => getDisplayStatus(t) === activeFilter);
+
+  let html = `<div class="filter-row">
+    <div class="filter-pills">${filters.map(f => `<button class="pill ${activeFilter===f?'active':''}" onclick="setFilter('${f}')">${f}</button>`).join('')}</div>
+    ${isManager ? `<button class="action-btn" onclick="toggleAddTask()">+ Assign Task</button>` : ''}
+  </div>`;
+
+  if (!isManager && myTasks.length === 0) html += `<div class="warning-bar">⚠️ No tasks have been assigned to you yet.</div>`;
+
+  html += `<div id="add-task-form" class="card hidden">
+    <div style="font-weight:600;margin-bottom:14px;">Assign New Task</div>
+    <div class="form-grid">
+      <input class="form-input full" id="task-title" placeholder="Task title *"/>
+      <div>
+        <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">Assign To *</label>
+        <select class="form-input" id="task-assignee" style="width:100%">
+          <option value="">-- Select Member --</option>
+          ${allMembers.map(m => `<option value="${m.name}">${m.name}${m.role?' · '+m.role:''}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">Category</label>
+        <select class="form-input" id="task-cat" style="width:100%">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">Priority</label>
+        <select class="form-input" id="task-prio" style="width:100%">${PRIORITIES.map(p=>`<option>${p}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">Due Date *</label>
+        <input type="date" class="form-input" id="task-due" style="width:100%"/>
+      </div>
+    </div>
+    <div class="error-msg hidden" id="task-err"></div>
+    <div class="form-actions">
+      <button class="btn-save" onclick="addTask()">Assign & Notify</button>
+      <button class="btn-cancel" onclick="toggleAddTask()">Cancel</button>
+    </div>
+  </div>`;
+
+  if (filtered.length === 0) {
+    html += `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">${isManager?'No tasks yet':'No tasks assigned to you'}</div></div>`;
+  } else {
+    filtered.forEach(t => { html += renderTaskCard(t); });
+  }
+  return html;
+}
+
+function renderTaskCard(t) {
+  const isManager = currentUser.role === 'manager';
+  const ds = getDisplayStatus(t);
+  const sc = stageColors[ds] || stageColors['Pending'];
+  const pc = prioColor[t.priority] || '#94a3b8';
+  const stageIdx = STAGES.indexOf(t.status);
+  const nextStage = STAGES[stageIdx + 1];
+  const comments = Array.isArray(t.comments) ? t.comments : [];
+
+  const stageBar = STAGES.map((s, i) => `
+    <div style="width:9px;height:9px;border-radius:50%;background:${i<=stageIdx?'#6366f1':'#e2e8f0'};display:inline-block;"></div>
+    <span style="font-size:10px;color:${i<=stageIdx?'#6366f1':'#94a3b8'};font-weight:${i===stageIdx?700:400};">${s}</span>
+    ${i<2?`<div style="width:18px;height:2px;background:${i<stageIdx?'#6366f1':'#e2e8f0'};display:inline-block;"></div>`:''}
+  `).join('');
+
+  return `<div class="task-card">
+    <div class="task-info">
+      <div class="task-title">${t.title}</div>
+      <div class="task-meta">
+        ${isManager?`<span>👤 ${t.assignee}</span>`:''}
+        <span>📁 ${t.category}</span>
+        <span>📅 Due: ${t.due}</span>
+        <span>⏱ TAT: ${getTAT(t)}d</span>
+      </div>
+      <div class="stage-bar" style="margin-top:10px;">${stageBar}</div>
+    </div>
+    <div class="task-actions">
+      <div class="task-badges">
+        <span class="badge" style="background:${pc}22;color:${pc}">${t.priority}</span>
+        <span class="badge" style="background:${sc.bg};color:${sc.color}">${ds}</span>
+      </div>
+      <div class="task-btn-row">
+        <button class="btn-sm btn-comment" onclick="openComments(${t.id})">💬${comments.length>0?' '+comments.length:''}</button>
+        ${!isManager && t.status !== 'Done' ? `<button class="btn-sm btn-advance" onclick="advanceStage(${t.id})">→ ${nextStage}</button>` : ''}
+        ${isManager ? `<button class="btn-sm btn-email" onclick="openEmailDraft(${t.id})">📧</button><button class="btn-delete" onclick="deleteTask(${t.id})">🗑</button>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function setFilter(f) { activeFilter = f; renderMain(); }
+function toggleAddTask() {
+  const el = document.getElementById('add-task-form');
+  if (el) el.classList.toggle('hidden');
+}
+
+async function addTask() {
+  const title = document.getElementById('task-title').value.trim();
+  const assignee = document.getElementById('task-assignee').value;
+  const category = document.getElementById('task-cat').value;
+  const priority = document.getElementById('task-prio').value;
+  const due = document.getElementById('task-due').value;
+  const errEl = document.getElementById('task-err');
+  if (!title) { errEl.textContent='Title required.'; errEl.classList.remove('hidden'); return; }
+  if (!assignee) { errEl.textContent='Select assignee.'; errEl.classList.remove('hidden'); return; }
+  if (!due) { errEl.textContent='Due date required.'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+
+  const { data: task, error } = await sb.from('tasks').insert([{ title, assignee, category, priority, due, status:'Pending', created: todayStr(), comments:[] }]).select().single();
+  if (error) { alert('Error saving task.'); return; }
+
+  await sb.from('notifications').insert([{ to_member: assignee, type:'task_assigned', task_title: title, task_id: task.id, date: todayStr(), read: false }]);
+
+  allTasks.push(task);
+  allNotifications.unshift({ to_member: assignee, type:'task_assigned', task_title: title, task_id: task.id, date: todayStr(), read: false });
+  updateNotifBadge();
+
+  const member = allMembers.find(m => m.name === assignee);
+  showEmailDraftModal(task, member);
+  renderMain();
+}
+
+async function advanceStage(taskId) {
+  const t = allTasks.find(x => x.id === taskId);
+  if (!t) return;
+  const idx = STAGES.indexOf(t.status);
+  if (idx >= STAGES.length - 1) return;
+  const next = STAGES[idx + 1];
+  const update = { status: next, completed_on: next === 'Done' ? todayStr() : null };
+  await sb.from('tasks').update(update).eq('id', taskId);
+  await sb.from('notifications').insert([{ to_member:'Manager', type:'status_update', task_title: t.title, task_id: taskId, new_status: next, by_member: currentUser.name, date: todayStr(), read: false }]);
+  Object.assign(t, update);
+  allNotifications.unshift({ to_member:'Manager', type:'status_update', task_title: t.title, task_id: taskId, new_status: next, by_member: currentUser.name, date: todayStr(), read: false });
+  renderMain();
+}
+
+async function deleteTask(taskId) {
+  if (!confirm('Delete this task?')) return;
+  await sb.from('tasks').delete().eq('id', taskId);
+  allTasks = allTasks.filter(t => t.id !== taskId);
+  renderMain();
+}
+
+// ── COMMENTS ──
+function openComments(taskId) {
+  currentCommentTaskId = taskId;
+  const t = allTasks.find(x => x.id === taskId);
+  document.getElementById('comment-task-title').textContent = t.title;
+  document.getElementById('comment-task-assignee').textContent = `Assignee: ${t.assignee}`;
+  renderComments(t);
+  document.getElementById('comment-modal').classList.remove('hidden');
+}
+
+function renderComments(t) {
+  const comments = Array.isArray(t.comments) ? t.comments : [];
+  const list = document.getElementById('comment-list');
+  if (comments.length === 0) { list.innerHTML = '<div style="color:#94a3b8;font-size:13px;text-align:center;padding:20px;">No comments yet.</div>'; return; }
+  list.innerHTML = comments.map(c => `
+    <div class="comment-bubble ${c.author===currentUser.name?'mine':'theirs'}">
+      <div class="comment-author">${c.author} · ${c.date}</div>
+      <div class="comment-text">${c.text}</div>
+    </div>`).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
+async function submitComment() {
+  const input = document.getElementById('comment-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const t = allTasks.find(x => x.id === currentCommentTaskId);
+  const comments = Array.isArray(t.comments) ? t.comments : [];
+  const newComment = { id: Date.now(), author: currentUser.name, text, date: todayStr() };
+  const updated = [...comments, newComment];
+  await sb.from('tasks').update({ comments: updated }).eq('id', currentCommentTaskId);
+  t.comments = updated;
+  input.value = '';
+  renderComments(t);
+  renderMain();
+}
+
+function closeComments() { document.getElementById('comment-modal').classList.add('hidden'); }
+document.getElementById('comment-modal').addEventListener('click', function(e) { if (e.target === this) closeComments(); });
+
+// ── EMAIL ──
+function openEmailDraft(taskId) {
+  const t = allTasks.find(x => x.id === taskId);
+  const member = allMembers.find(m => m.name === t.assignee);
+  showEmailDraftModal(t, member);
+}
+
+function showEmailDraftModal(task, member) {
+  const email = member?.email || '[member email]';
+  const subject = `New Task Assigned: ${task.title}`;
+  const body = `Hi ${task.assignee},\n\nA new task has been assigned to you on TeamTrack.\n\nTask: ${task.title}\nCategory: ${task.category}\nPriority: ${task.priority}\nDue Date: ${task.due}\n\nPlease log in to TeamTrack to view and update your task status.\n\nRegards,\nManager`;
+  currentEmailDraft = { email, subject, body };
+  document.getElementById('email-preview-text').textContent = `To: ${email}\nSubject: ${subject}\n\n${body}`;
+  document.getElementById('mailto-link').href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  document.getElementById('email-modal').classList.remove('hidden');
+}
+
+function copyEmail() {
+  const text = document.getElementById('email-preview-text').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✅ Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// ── TEAM ──
+function renderTeam() {
+  let html = `<div class="section-title">👥 Team Members</div>
+  <div class="section-sub">Add members before assigning tasks.</div>
+  <div class="card">
+    <div style="font-weight:600;font-size:14px;margin-bottom:12px;">Add New Member</div>
+    <div class="form-grid">
+      <input class="form-input full" id="m-name" placeholder="Full Name *"/>
+      <input class="form-input" id="m-role" placeholder="Role (e.g. HR BP)"/>
+      <input class="form-input" id="m-dept" placeholder="Department"/>
+      <input class="form-input full" id="m-email" placeholder="Email (for notifications)"/>
+    </div>
+    <div class="error-msg hidden" id="member-err"></div>
+    <button class="btn-save" style="margin-top:12px;" onclick="addMember()">+ Add Member</button>
+  </div>`;
+
+  if (allMembers.length === 0) {
+    html += `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No members yet</div></div>`;
+  } else {
+    html += `<div class="member-grid">`;
+    allMembers.forEach(m => {
+      const mt = allTasks.filter(t => t.assignee === m.name);
+      const done = mt.filter(t => t.status === 'Done').length;
+      html += `<div class="member-card">
+        <div class="member-header">
+          <div class="member-avatar">${m.name[0].toUpperCase()}</div>
+          <button class="remove-btn" onclick="removeMember(${m.id},'${m.name}')">✕</button>
+        </div>
+        <div class="member-name">${m.name}</div>
+        ${m.role?`<div class="member-role">${m.role}</div>`:''}
+        ${m.dept?`<div class="member-dept">${m.dept}</div>`:''}
+        ${m.email?`<div class="member-email">✉️ ${m.email}</div>`:''}
+        <div class="member-stats">📋 ${mt.length} tasks · ✅ ${done} done</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  return html;
+}
+
+async function addMember() {
+  const name = document.getElementById('m-name').value.trim();
+  const role = document.getElementById('m-role').value.trim();
+  const dept = document.getElementById('m-dept').value.trim();
+  const email = document.getElementById('m-email').value.trim();
+  const errEl = document.getElementById('member-err');
+  if (!name) { errEl.textContent='Name required.'; errEl.classList.remove('hidden'); return; }
+  if (allMembers.find(m => m.name.toLowerCase() === name.toLowerCase())) { errEl.textContent='Already exists.'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+  const { data, error } = await sb.from('members').insert([{ name, role, dept, email }]).select().single();
+  if (error) { alert('Error saving member.'); return; }
+  allMembers.push(data);
+  renderMain();
+}
+
+async function removeMember(id, name) {
+  if (!confirm(`Remove ${name}?`)) return;
+  await sb.from('members').delete().eq('id', id);
+  await sb.from('tasks').delete().eq('assignee', name);
+  allMembers = allMembers.filter(m => m.id !== id);
+  allTasks = allTasks.filter(t => t.assignee !== name);
+  renderMain();
+}
+
+// ── LEADERBOARD ──
+function renderLeaderboard() {
+  const lb = allMembers.map(m => {
+    const mt = allTasks.filter(t => t.assignee === m.name);
+    const onTime = mt.filter(t => t.status==='Done' && (!t.completed_on || t.completed_on <= t.due)).length;
+    const late = mt.filter(t => t.status!=='Done' && new Date(t.due) < new Date()).length;
+    const rate = mt.length > 0 ? Math.round((onTime/mt.length)*100) : 0;
+    return { ...m, total: mt.length, onTime, late, rate };
+  }).sort((a,b) => b.onTime - a.onTime);
+
+  let html = `<div class="section-title">🏆 Leaderboard</div><div class="section-sub">Ranked by tasks completed on time</div>`;
+  if (lb.length === 0) return html + `<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-title">No data yet</div></div>`;
+
+  lb.forEach((m, i) => {
+    const bg = i===0?'linear-gradient(135deg,#fef3c7,#fde68a)':i===1?'#f1f5f9':i===2?'linear-gradient(135deg,#fef9f0,#fed7aa)':'#fff';
+    html += `<div class="lb-row" style="background:${bg};">
+      <div class="lb-rank">${rankEmoji(i)}</div>
+      <div style="flex:1;"><div class="lb-name">${m.name}</div><div class="lb-meta">Total: ${m.total} · On time: ${m.onTime} · Overdue: ${m.late}</div></div>
+      <div><div class="lb-score">${m.onTime}</div><div class="lb-label">on-time</div></div>
+      <div><div class="lb-rate">${m.rate}%</div><div class="lb-label">rate</div></div>
+    </div>`;
+  });
+  return html;
+}
+
+// ── APPRECIATION ──
+function renderAppreciation() {
+  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <div><div class="section-title">🌟 Appreciation Wall</div><div class="section-sub" style="margin-bottom:0;">Celebrate your teammates!</div></div>
+    <button class="action-btn" onclick="toggleAppForm()">+ Appreciate</button>
+  </div>
+  <div id="app-form" class="card hidden">
+    <div style="font-weight:600;margin-bottom:14px;">Send Appreciation</div>
+    <div class="form-grid">
+      <div>
+        <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">From</label>
+        <select class="form-input" id="app-from" style="width:100%">
+          <option value="">-- Select --</option>
+          ${allMembers.map(m=>`<option value="${m.name}">${m.name}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">To</label>
+        <select class="form-input" id="app-to" style="width:100%">
+          <option value="">-- Select --</option>
+          ${allMembers.map(m=>`<option value="${m.name}">${m.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="full">
+        <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">Badge</label>
+        <div class="badge-pills" id="badge-pills">
+          ${BADGES.map(b=>`<button class="badge-select-btn" id="badge-btn-${b.id}" onclick="selectBadge('${b.id}')" style="border:2px solid #e2e8f0;background:#fff;color:${b.color};">${b.emoji} ${b.label}</button>`).join('')}
+        </div>
+      </div>
+      <textarea class="form-textarea full" id="app-msg" rows="3" placeholder="Write a shoutout..."></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn-save" onclick="sendAppreciation()">Send 🎉</button>
+      <button class="btn-cancel" onclick="toggleAppForm()">Cancel</button>
+    </div>
+  </div>`;
+
+  if (allAppreciations.length === 0) {
+    html += `<div class="empty-state"><div class="empty-icon">🌟</div><div class="empty-title">No appreciations yet</div></div>`;
+  } else {
+    allAppreciations.forEach(a => {
+      const badge = getBadge(a.badge);
+      html += `<div class="app-card" style="border:1px solid ${badge.color}44;">
+        <div class="app-emoji">${badge.emoji}</div>
+        <div class="app-info">
+          <div class="app-from"><span style="color:#6366f1;">${a.from_member}</span> → ${a.to_member}</div>
+          <span class="app-badge-pill" style="background:${badge.color}22;color:${badge.color};">${badge.label}</span>
+          <div class="app-msg">${a.message}</div>
+          <div class="app-date">${a.date}</div>
+        </div>
+        <button class="share-btn" onclick='openShareCard(${JSON.stringify(a)})'>🔗 Share</button>
+      </div>`;
+    });
+  }
+  return html;
+}
+
+function toggleAppForm() {
+  const el = document.getElementById('app-form');
+  if (el) { el.classList.toggle('hidden'); selectBadge('speed'); }
+}
+
+function selectBadge(id) {
+  selectedAppBadge = id;
+  BADGES.forEach(b => {
+    const btn = document.getElementById(`badge-btn-${b.id}`);
+    if (btn) {
+      btn.style.border = b.id === id ? `2px solid ${b.color}` : '2px solid #e2e8f0';
+      btn.style.background = b.id === id ? b.color + '22' : '#fff';
+    }
+  });
+}
+
+async function sendAppreciation() {
+  const from_member = document.getElementById('app-from').value;
+  const to_member = document.getElementById('app-to').value;
+  const message = document.getElementById('app-msg').value.trim();
+  if (!from_member || !to_member || !message) { alert('Please fill all fields.'); return; }
+  const { data, error } = await sb.from('appreciations').insert([{ from_member, to_member, badge: selectedAppBadge, message, date: todayStr() }]).select().single();
+  if (error) { alert('Error sending appreciation.'); return; }
+  allAppreciations.unshift(data);
+  renderMain();
+}
+
+function openShareCard(a) {
+  const badge = getBadge(a.badge);
+  document.getElementById('share-emoji').textContent = badge.emoji;
+  document.getElementById('share-name').textContent = a.to_member;
+  document.getElementById('share-badge-label').textContent = badge.label;
+  document.getElementById('share-badge-label').style.color = badge.color;
+  document.getElementById('share-msg').textContent = `"${a.message}"`;
+  document.getElementById('share-from').textContent = `— ${a.from_member} · ${a.date}`;
+  const card = document.getElementById('share-card-inner');
+  card.style.background = `linear-gradient(135deg,${badge.color}33,#fff)`;
+  card.style.border = `2px solid ${badge.color}`;
+  document.getElementById('share-modal').classList.remove('hidden');
+}
+
+// ── NOTIFICATIONS ──
+function toggleNotif() {
+  notifOpen = !notifOpen;
+  const panel = document.getElementById('notif-panel');
+  if (notifOpen) { renderNotifPanel(); panel.classList.remove('hidden'); }
+  else panel.classList.add('hidden');
+}
+
+function renderNotifPanel() {
+  const myNotifs = allNotifications.filter(n => n.to_member === currentUser.name);
+  let html = `<div class="notif-header">🔔 Notifications <button class="mark-read-btn" onclick="markAllRead()">Mark all read</button></div>`;
+  if (myNotifs.length === 0) html += `<div style="padding:20px;color:#94a3b8;font-size:13px;text-align:center;">No notifications</div>`;
+  else myNotifs.forEach(n => {
+    html += `<div class="notif-item ${!n.read?'unread':''}">
+      <div>${n.type==='task_assigned'?`<span style="color:#6366f1;font-weight:600;">📋 New task:</span> ${n.task_title}`:`<span style="color:#10b981;font-weight:600;">✅ ${n.by_member}</span> moved "<strong>${n.task_title}</strong>" to <strong>${n.new_status}</strong>`}</div>
+      <div class="notif-date">${n.date}</div>
+    </div>`;
+  });
+  document.getElementById('notif-panel').innerHTML = html;
+}
+
+async function markAllRead() {
+  await sb.from('notifications').update({ read: true }).eq('to_member', currentUser.name);
+  allNotifications = allNotifications.map(n => n.to_member === currentUser.name ? { ...n, read: true } : n);
+  updateNotifBadge();
+  renderNotifPanel();
+}
+
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('notif-panel');
+  const btn = document.querySelector('.notif-btn');
+  if (notifOpen && panel && !panel.contains(e.target) && !btn.contains(e.target)) {
+    notifOpen = false; panel.classList.add('hidden');
+  }
+});
+
+// ── INIT ──
+window.onload = async function() {
+  const { data: members } = await sb.from('members').select('*').order('created_at');
+  allMembers = members || [];
+};
+</script>
+</body>
+</html>
